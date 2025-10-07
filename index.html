@@ -4,24 +4,165 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Soil Moisture Calculator</title>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://unpkg.com/lucide-react@latest/dist/lucide-react.min.js"></script>
+  <!-- React and ReactDOM -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <!-- Babel for JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- XLSX library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <!-- Lucide Icons -->
+  <script type="module">
+    import * as lucide from 'https://cdn.jsdelivr.net/npm/lucide@0.259.0/dist/lucide.esm.js';
+    window.LucideIcons = lucide;
+  </script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f0f4f8; }
+    h1 { color: #2a7a2a; }
+    input, select, button { padding: 4px 6px; margin: 2px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+    th, td { border: 1px solid #999; padding: 6px; text-align: left; }
+    th { background-color: #ddd; }
+    .reminder { background: #fff3cd; padding: 6px; margin-top: 6px; }
+  </style>
 </head>
-<body class="bg-gray-50">
+<body>
   <div id="root"></div>
 
-  <!-- React Code -->
   <script type="text/babel">
 
+    const { useState, useEffect } = React;
 
-// React component content
+    function SoilMoistureApp() {
+      const [studyInfo, setStudyInfo] = useState({
+        studyName: '',
+        year: new Date().getFullYear(),
+        samplingDate: new Date().toISOString().split('T')[0]
+      });
+      const [ovenInfo, setOvenInfo] = useState({ ovenInDate:'', ovenInTime:'', ovenOutDate:'', ovenOutTime:'' });
+      const [samples, setSamples] = useState([]);
+      const [showReminder, setShowReminder] = useState(false);
+      const [timeRemaining, setTimeRemaining] = useState('');
 
+      useEffect(() => {
+        if(ovenInfo.ovenInDate && ovenInfo.ovenInTime) {
+          const interval = setInterval(()=>{
+            const ovenDT = new Date(`${ovenInfo.ovenInDate}T${ovenInfo.ovenInTime}`);
+            const target = new Date(ovenDT.getTime() + 48*60*60*1000);
+            const now = new Date();
+            const diff = target - now;
+            if(diff>0) {
+              const h=Math.floor(diff/(1000*60*60));
+              const m=Math.floor((diff % (1000*60*60))/(1000*60));
+              setTimeRemaining(`${h}h ${m}m remaining`);
+            } else setTimeRemaining('48 hours completed - Ready to measure!');
+            setShowReminder(true);
+          }, 60000);
+          return ()=>clearInterval(interval);
+        }
+      }, [ovenInfo.ovenInDate, ovenInfo.ovenInTime]);
 
-ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(SoilMoistureApp));
+      const addSample = ()=>setSamples([...samples, {
+        id: Date.now(), trayId:'', plotNumber:'', treatment:'', soilDepth:'', depthUnit:'cm',
+        cupId:'', cupWeight:'', cupFreshSoilWeight:'', cupDrySoilWeight:'', moisturePercent:''
+      }]);
+
+      const updateSample=(id, field, value)=>{
+        setSamples(samples.map(s=>{
+          if(s.id===id){
+            const updated={...s, [field]:value};
+            const cw=parseFloat(updated.cupWeight), cfw=parseFloat(updated.cupFreshSoilWeight), cdw=parseFloat(updated.cupDrySoilWeight);
+            if(!isNaN(cw)&&!isNaN(cfw)&&!isNaN(cdw)){
+              updated.moisturePercent = (((cfw-cdw)/ (cdw-cw))*100).toFixed(2);
+            }
+            return updated;
+          }
+          return s;
+        }));
+      };
+
+      const deleteSample = id => setSamples(samples.filter(s=>s.id!==id));
+
+      const exportToExcel = () => {
+        const data = samples.map(s=>({
+          'Study Name': studyInfo.studyName, 'Year':studyInfo.year, 'Sampling Date':studyInfo.samplingDate,
+          'Tray ID':s.trayId, 'Plot Number':s.plotNumber, 'Treatment':s.treatment, 'Soil Depth':s.soilDepth,
+          'Depth Unit':s.depthUnit, 'Cup ID':s.cupId, 'Cup Wt (g)':s.cupWeight, 'Cup+Fresh (g)':s.cupFreshSoilWeight,
+          'Cup+Dry (g)':s.cupDrySoilWeight, 'Oven In': ovenInfo.ovenInDate ? `${ovenInfo.ovenInDate} ${ovenInfo.ovenInTime}`:'',
+          'Oven Out': ovenInfo.ovenOutDate ? `${ovenInfo.ovenOutDate} ${ovenInfo.ovenOutTime}`:'', 'Soil Moisture (%)':''
+        }));
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'SoilMoisture');
+        XLSX.writeFile(wb, `SoilMoisture_${studyInfo.studyName}_${studyInfo.year}.xlsx`);
+      };
+
+      const generateEmailBody = ()=>encodeURIComponent(`Soil Moisture Data
+Study: ${studyInfo.studyName}
+Year: ${studyInfo.year}
+Sampling Date: ${studyInfo.samplingDate}
+Total Samples: ${samples.length}
+Oven In: ${ovenInfo.ovenInDate} ${ovenInfo.ovenInTime}
+Oven Out: ${ovenInfo.ovenOutDate} ${ovenInfo.ovenOutTime}
+Please find the Excel file attached.`);
+
+      return (
+        <div>
+          <h1>Soil Moisture Calculator</h1>
+
+          <h2>Study Info</h2>
+          <input type="text" value={studyInfo.studyName} placeholder="Study Name"
+            onChange={e=>setStudyInfo({...studyInfo, studyName:e.target.value})}/>
+          <input type="number" value={studyInfo.year} onChange={e=>setStudyInfo({...studyInfo, year:e.target.value})}/>
+          <input type="date" value={studyInfo.samplingDate} onChange={e=>setStudyInfo({...studyInfo, samplingDate:e.target.value})}/>
+
+          <h2>Oven Info</h2>
+          <input type="date" value={ovenInfo.ovenInDate} onChange={e=>setOvenInfo({...ovenInfo, ovenInDate:e.target.value})}/>
+          <input type="time" value={ovenInfo.ovenInTime} onChange={e=>setOvenInfo({...ovenInfo, ovenInTime:e.target.value})}/>
+          <input type="date" value={ovenInfo.ovenOutDate} onChange={e=>setOvenInfo({...ovenInfo, ovenOutDate:e.target.value})}/>
+          <input type="time" value={ovenInfo.ovenOutTime} onChange={e=>setOvenInfo({...ovenInfo, ovenOutTime:e.target.value})}/>
+
+          {showReminder && <div className="reminder">⏰ {timeRemaining}</div>}
+
+          <h2>Samples</h2>
+          <button onClick={addSample}>Add Sample</button>
+          <table>
+            <thead>
+              <tr>
+                <th>Tray ID</th><th>Plot #</th><th>Treatment</th><th>Depth</th><th>Unit</th>
+                <th>Cup ID</th><th>Cup Wt</th><th>Cup+Fresh</th><th>Cup+Dry</th><th>Moisture %</th><th>Del</th>
+              </tr>
+            </thead>
+            <tbody>
+              {samples.map(s=>(
+                <tr key={s.id}>
+                  <td><input value={s.trayId} onChange={e=>updateSample(s.id,'trayId',e.target.value)}/></td>
+                  <td><input value={s.plotNumber} onChange={e=>updateSample(s.id,'plotNumber',e.target.value)}/></td>
+                  <td><input value={s.treatment} onChange={e=>updateSample(s.id,'treatment',e.target.value)}/></td>
+                  <td><input value={s.soilDepth} onChange={e=>updateSample(s.id,'soilDepth',e.target.value)}/></td>
+                  <td><input value={s.depthUnit} onChange={e=>updateSample(s.id,'depthUnit',e.target.value)}/></td>
+                  <td><input value={s.cupId} onChange={e=>updateSample(s.id,'cupId',e.target.value)}/></td>
+                  <td><input value={s.cupWeight} onChange={e=>updateSample(s.id,'cupWeight',e.target.value)}/></td>
+                  <td><input value={s.cupFreshSoilWeight} onChange={e=>updateSample(s.id,'cupFreshSoilWeight',e.target.value)}/></td>
+                  <td><input value={s.cupDrySoilWeight} onChange={e=>updateSample(s.id,'cupDrySoilWeight',e.target.value)}/></td>
+                  <td>{s.moisturePercent}</td>
+                  <td><button onClick={()=>deleteSample(s.id)}>X</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {samples.length>0 && (
+            <div>
+              <button onClick={exportToExcel}>Export Excel</button>
+              <a href={`mailto:?subject=Soil Moisture Data&body=${generateEmailBody()}`}>Email Data</a>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<SoilMoistureApp />);
   </script>
 </body>
 </html>
