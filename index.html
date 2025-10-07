@@ -4,33 +4,16 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Soil Moisture Calculator</title>
-  <!-- React and ReactDOM -->
   <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-  <!-- Babel for JSX -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <!-- XLSX library -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <!-- Lucide Icons -->
-  <script type="module">
-    import * as lucide from 'https://cdn.jsdelivr.net/npm/lucide@0.259.0/dist/lucide.esm.js';
-    window.LucideIcons = lucide;
-  </script>
-  <style>
-    body { font-family: Arial, sans-serif; padding: 20px; background: #f0f4f8; }
-    h1 { color: #2a7a2a; }
-    input, select, button { padding: 4px 6px; margin: 2px; }
-    table { border-collapse: collapse; width: 100%; margin-top: 10px; }
-    th, td { border: 1px solid #999; padding: 6px; text-align: left; }
-    th { background-color: #ddd; }
-    .reminder { background: #fff3cd; padding: 6px; margin-top: 6px; }
-  </style>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.3/dist/tailwind.min.css" rel="stylesheet">
 </head>
-<body>
+<body class="bg-gradient-to-br from-green-50 to-blue-50">
   <div id="root"></div>
 
   <script type="text/babel">
-
     const { useState, useEffect } = React;
 
     function SoilMoistureApp() {
@@ -51,7 +34,7 @@
             const target = new Date(ovenDT.getTime() + 48*60*60*1000);
             const now = new Date();
             const diff = target - now;
-            if(diff>0) {
+            if(diff>0){
               const h=Math.floor(diff/(1000*60*60));
               const m=Math.floor((diff % (1000*60*60))/(1000*60));
               setTimeRemaining(`${h}h ${m}m remaining`);
@@ -107,55 +90,76 @@ Oven Out: ${ovenInfo.ovenOutDate} ${ovenInfo.ovenOutTime}
 Please find the Excel file attached.`);
 
       return (
-        <div>
-          <h1>Soil Moisture Calculator</h1>
+        <div className="max-w-3xl mx-auto p-4">
+          <h1 className="text-3xl font-bold text-green-800 mb-6 text-center">Soil Moisture Calculator</h1>
 
-          <h2>Study Info</h2>
-          <input type="text" value={studyInfo.studyName} placeholder="Study Name"
-            onChange={e=>setStudyInfo({...studyInfo, studyName:e.target.value})}/>
-          <input type="number" value={studyInfo.year} onChange={e=>setStudyInfo({...studyInfo, year:e.target.value})}/>
-          <input type="date" value={studyInfo.samplingDate} onChange={e=>setStudyInfo({...studyInfo, samplingDate:e.target.value})}/>
+          {/* Study Info */}
+          <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+            <h2 className="font-semibold text-lg mb-2">Study Info</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <input type="text" value={studyInfo.studyName} placeholder="Study Name"
+                className="border p-2 rounded" onChange={e=>setStudyInfo({...studyInfo, studyName:e.target.value})}/>
+              <input type="number" value={studyInfo.year} className="border p-2 rounded" onChange={e=>setStudyInfo({...studyInfo, year:e.target.value})}/>
+              <input type="date" value={studyInfo.samplingDate} className="border p-2 rounded" onChange={e=>setStudyInfo({...studyInfo, samplingDate:e.target.value})}/>
+            </div>
+          </div>
 
-          <h2>Oven Info</h2>
-          <input type="date" value={ovenInfo.ovenInDate} onChange={e=>setOvenInfo({...ovenInfo, ovenInDate:e.target.value})}/>
-          <input type="time" value={ovenInfo.ovenInTime} onChange={e=>setOvenInfo({...ovenInfo, ovenInTime:e.target.value})}/>
-          <input type="date" value={ovenInfo.ovenOutDate} onChange={e=>setOvenInfo({...ovenInfo, ovenOutDate:e.target.value})}/>
-          <input type="time" value={ovenInfo.ovenOutTime} onChange={e=>setOvenInfo({...ovenInfo, ovenOutTime:e.target.value})}/>
+          {/* Oven Info */}
+          <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+            <h2 className="font-semibold text-lg mb-2">Oven Info</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <input type="date" value={ovenInfo.ovenInDate} className="border p-2 rounded" onChange={e=>setOvenInfo({...ovenInfo, ovenInDate:e.target.value})}/>
+              <input type="time" value={ovenInfo.ovenInTime} className="border p-2 rounded" onChange={e=>setOvenInfo({...ovenInfo, ovenInTime:e.target.value})}/>
+              <input type="date" value={ovenInfo.ovenOutDate} className="border p-2 rounded" onChange={e=>setOvenInfo({...ovenInfo, ovenOutDate:e.target.value})}/>
+              <input type="time" value={ovenInfo.ovenOutTime} className="border p-2 rounded" onChange={e=>setOvenInfo({...ovenInfo, ovenOutTime:e.target.value})}/>
+            </div>
+            {showReminder && <div className="reminder mt-2 p-2 bg-yellow-100 text-yellow-800 rounded">⏰ {timeRemaining}</div>}
+          </div>
 
-          {showReminder && <div className="reminder">⏰ {timeRemaining}</div>}
+          {/* Samples */}
+          <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+            <div className="flex justify-between mb-2 items-center">
+              <h2 className="font-semibold text-lg">Samples</h2>
+              <button className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700" onClick={addSample}>Add Sample</button>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th>Tray ID</th><th>Plot #</th><th>Treatment</th><th>Depth</th><th>Unit</th>
+                    <th>Cup ID</th><th>Cup Wt</th><th>Cup+Fresh</th><th>Cup+Dry</th><th>Moisture %</th><th>Del</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {samples.map(s=>(
+                    <tr key={s.id} className="hover:bg-gray-50">
+                      <td><input value={s.trayId} onChange={e=>updateSample(s.id,'trayId',e.target.value)} className="border p-1 rounded w-full"/></td>
+                      <td><input value={s.plotNumber} onChange={e=>updateSample(s.id,'plotNumber',e.target.value)} className="border p-1 rounded w-full"/></td>
+                      <td><input value={s.treatment} onChange={e=>updateSample(s.id,'treatment',e.target.value)} className="border p-1 rounded w-full"/></td>
+                      <td><input value={s.soilDepth} onChange={e=>updateSample(s.id,'soilDepth',e.target.value)} className="border p-1 rounded w-full"/></td>
+                      <td>
+                        <select value={s.depthUnit} onChange={e=>updateSample(s.id,'depthUnit',e.target.value)} className="border p-1 rounded w-full">
+                          <option>cm</option><option>in</option>
+                        </select>
+                      </td>
+                      <td><input value={s.cupId} onChange={e=>updateSample(s.id,'cupId',e.target.value)} className="border p-1 rounded w-full"/></td>
+                      <td><input value={s.cupWeight} onChange={e=>updateSample(s.id,'cupWeight',e.target.value)} className="border p-1 rounded w-full"/></td>
+                      <td><input value={s.cupFreshSoilWeight} onChange={e=>updateSample(s.id,'cupFreshSoilWeight',e.target.value)} className="border p-1 rounded w-full"/></td>
+                      <td><input value={s.cupDrySoilWeight} onChange={e=>updateSample(s.id,'cupDrySoilWeight',e.target.value)} className="border p-1 rounded w-full bg-yellow-50"/></td>
+                      <td className="font-semibold text-green-700">{s.moisturePercent}</td>
+                      <td><button className="text-red-600 hover:text-red-800" onClick={()=>deleteSample(s.id)}>X</button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
 
-          <h2>Samples</h2>
-          <button onClick={addSample}>Add Sample</button>
-          <table>
-            <thead>
-              <tr>
-                <th>Tray ID</th><th>Plot #</th><th>Treatment</th><th>Depth</th><th>Unit</th>
-                <th>Cup ID</th><th>Cup Wt</th><th>Cup+Fresh</th><th>Cup+Dry</th><th>Moisture %</th><th>Del</th>
-              </tr>
-            </thead>
-            <tbody>
-              {samples.map(s=>(
-                <tr key={s.id}>
-                  <td><input value={s.trayId} onChange={e=>updateSample(s.id,'trayId',e.target.value)}/></td>
-                  <td><input value={s.plotNumber} onChange={e=>updateSample(s.id,'plotNumber',e.target.value)}/></td>
-                  <td><input value={s.treatment} onChange={e=>updateSample(s.id,'treatment',e.target.value)}/></td>
-                  <td><input value={s.soilDepth} onChange={e=>updateSample(s.id,'soilDepth',e.target.value)}/></td>
-                  <td><input value={s.depthUnit} onChange={e=>updateSample(s.id,'depthUnit',e.target.value)}/></td>
-                  <td><input value={s.cupId} onChange={e=>updateSample(s.id,'cupId',e.target.value)}/></td>
-                  <td><input value={s.cupWeight} onChange={e=>updateSample(s.id,'cupWeight',e.target.value)}/></td>
-                  <td><input value={s.cupFreshSoilWeight} onChange={e=>updateSample(s.id,'cupFreshSoilWeight',e.target.value)}/></td>
-                  <td><input value={s.cupDrySoilWeight} onChange={e=>updateSample(s.id,'cupDrySoilWeight',e.target.value)}/></td>
-                  <td>{s.moisturePercent}</td>
-                  <td><button onClick={()=>deleteSample(s.id)}>X</button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
+          {/* Export Buttons */}
           {samples.length>0 && (
-            <div>
-              <button onClick={exportToExcel}>Export Excel</button>
-              <a href={`mailto:?subject=Soil Moisture Data&body=${generateEmailBody()}`}>Email Data</a>
+            <div className="flex flex-col sm:flex-row gap-2 mb-6">
+              <button className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700" onClick={exportToExcel}>Export Excel</button>
+              <a className="bg-gray-600 text-white px-4 py-2 rounded text-center hover:bg-gray-700" href={`mailto:?subject=Soil Moisture Data&body=${generateEmailBody()}`}>Email Data</a>
             </div>
           )}
         </div>
